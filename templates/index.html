@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tic Tac Toe</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Tic Tac Toe Game</h1>
+    <div id="game-board">
+        {% for i in range(9) %}
+            <div class="cell" onclick="makeMove({{ i }})">
+                {{ board[i] if board[i] != ' ' else '' }}
+            </div>
+        {% endfor %}
+    </div>
+    <p id="status">{{ 'Current Player: ' + current_player if not game_over else ('Winner: ' + winner if winner else 'It\'s a tie!') }}</p>
+    <button onclick="resetGame()">Reset Game</button>
+
+    <script>
+        const cells = document.querySelectorAll('.cell');
+        let currentPlayer = '{{ current_player }}';
+        let gameOver = {{ game_over | tojson }};
+        let winner = {{ winner | tojson }};
+
+        function updateBoard(response) {
+            board = response.board;
+            currentPlayer = response.currentPlayer;
+            gameOver = response.gameOver;
+            winner = response.winner;
+
+            cells.forEach((cell, index) => {
+                cell.textContent = board[index];
+            });
+
+            if (gameOver) {
+                document.getElementById('status').textContent = winner ? `Winner: ${winner}` : 'It\'s a tie!';
+            } else {
+                document.getElementById('status').textContent = `Current Player: ${currentPlayer}`;
+            }
+        }
+
+        function makeMove(position) {
+            fetch('/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `position=${position}`
+            })
+            .then(response => response.json())
+            .then(updateBoard);
+        }
+
+        function resetGame() {
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>
