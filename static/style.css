@@ -62,6 +62,12 @@ h1 {
     text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
+.winner:hover {
+    background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+    transform: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
 @keyframes pulse {
     0% { transform: scale(1); }
     50% { transform: scale(1.05); }
