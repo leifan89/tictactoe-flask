@@ -9,7 +9,7 @@
     <h1>Tic Tac Toe Game</h1>
     <div id="game-board">
         {% for i in range(9) %}
-            <div class="cell" onclick="makeMove({{ i }})">
+            <div class="cell" onclick="makeMove({{ i }})" data-index="{{ i }}">
                 {{ board[i] if board[i] != ' ' else '' }}
             </div>
         {% endfor %}
@@ -19,15 +19,19 @@
 
     <script>
         const cells = document.querySelectorAll('.cell');
+        let board = {{ board | tojson }};
         let currentPlayer = '{{ current_player }}';
-        let gameOver = {{ game_over | tojson }};
-        let winner = {{ winner | tojson }};
+        let gameOver = {{ game_over | lower }};
+        let winner = {% if winner %}{{ winner | tojson }}{% else %}null{% endif %};
+        let winningCondition = {% if winning_condition %}{{ winning_condition | tojson }}{% else %}null{% endif %};
+        let winningCells = [];
 
         function updateBoard(response) {
             board = response.board;
             currentPlayer = response.currentPlayer;
             gameOver = response.gameOver;
             winner = response.winner;
+            winningCondition = response.winningCondition;
 
             cells.forEach((cell, index) => {
                 cell.textContent = board[index];
@@ -35,6 +39,9 @@
 
             if (gameOver) {
                 document.getElementById('status').textContent = winner ? `Winner: ${winner}` : 'It\'s a tie!';
+                if (winningCondition) {
+                    highlightWinningCells();
+                }
             } else {
                 document.getElementById('status').textContent = `Current Player: ${currentPlayer}`;
             }
@@ -55,6 +62,87 @@
         function resetGame() {
             window.location.reload();
         }
+
+        function highlightWinningCells() {
+            if (winningCondition) {
+                winningCells = winningCondition;
+                
+                // Add winner class to cells
+                cells.forEach(cell => {
+                    const index = parseInt(cell.getAttribute('data-index'));
+                    if (winningCells.includes(index)) {
+                        cell.classList.add('winner');
+                    }
+                });
+
+                // Create and add the winning line
+                createWinningLine(winningCondition);
+            }
+        }
+
+        function createWinningLine(condition) {
+            const gameBoard = document.getElementById('game-board');
+            const line = document.createElement('div');
+            line.className = 'winning-line';
+            
+            // Determine line type and position based on the winning condition
+            if (condition[0] === 0 && condition[1] === 1 && condition[2] === 2) {
+                // Top horizontal (row 0)
+                line.style.top = '50px';
+                line.style.left = '5px';
+                line.style.width = '305px';
+                line.style.height = '4px';
+            } else if (condition[0] === 3 && condition[1] === 4 && condition[2] === 5) {
+                // Middle horizontal (row 1)
+                line.style.top = '155px';
+                line.style.left = '5px';
+                line.style.width = '305px';
+                line.style.height = '4px';
+            } else if (condition[0] === 6 && condition[1] === 7 && condition[2] === 8) {
+                // Bottom horizontal (row 2)
+                line.style.top = '260px';
+                line.style.left = '5px';
+                line.style.width = '305px';
+                line.style.height = '4px';
+            } else if (condition[0] === 0 && condition[1] === 3 && condition[2] === 6) {
+                // Left vertical (column 0)
+                line.style.top = '5px';
+                line.style.left = '50px';
+                line.style.width = '4px';
+                line.style.height = '305px';
+            } else if (condition[0] === 1 && condition[1] === 4 && condition[2] === 7) {
+                // Middle vertical (column 1)
+                line.style.top = '5px';
+                line.style.left = '155px';
+                line.style.width = '4px';
+                line.style.height = '305px';
+            } else if (condition[0] === 2 && condition[1] === 5 && condition[2] === 8) {
+                // Right vertical (column 2)
+                line.style.top = '5px';
+                line.style.left = '260px';
+                line.style.width = '4px';
+                line.style.height = '305px';
+            } else if (condition[0] === 0 && condition[1] === 4 && condition[2] === 8) {
+                // Top-left to bottom-right diagonal
+                line.style.top = '50%';
+                line.style.left = '50%';
+                line.style.width = '430px';
+                line.style.height = '4px';
+                line.style.transform = 'translate(-50%, -50%) rotate(45deg)';
+                line.style.transformOrigin = 'center';
+            } else if (condition[0] === 2 && condition[1] === 4 && condition[2] === 6) {
+                // Top-right to bottom-left diagonal
+                line.style.top = '50%';
+                line.style.left = '50%';
+                line.style.width = '430px';
+                line.style.height = '4px';
+                line.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
+                line.style.transformOrigin = 'center';
+            }
+            
+            gameBoard.appendChild(line);
+        }
+
     </script>
 </body>
 </html>

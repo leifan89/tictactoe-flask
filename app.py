@@ -7,9 +7,10 @@ board = [' ' for _ in range(9)]
 current_player = 'X'
 game_over = False
 winner = None
+winning_condition = None
 
 def check_winner():
-    global winner, game_over
+    global winner, game_over, winning_condition
     win_conditions = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8],  # Horizontal wins
         [0, 3, 6], [1, 4, 7], [2, 5, 8],  # Vertical wins
@@ -18,6 +19,7 @@ def check_winner():
     for condition in win_conditions:
         if board[condition[0]] == board[condition[1]] == board[condition[2]] != ' ':
             winner = board[condition[0]]
+            winning_condition = condition
             game_over = True
             return
     if ' ' not in board:
@@ -25,13 +27,14 @@ def check_winner():
 
 @app.route('/')
 def index():
-    global board, current_player, game_over, winner
+    global board, current_player, game_over, winner, winning_condition
     # Reset the game state when the page is loaded
     board = [' ' for _ in range(9)]
     current_player = 'X'
     game_over = False
     winner = None
-    return render_template('index.html', board=board, current_player=current_player, game_over=game_over, winner=winner)
+    winning_condition = None
+    return render_template('index.html', board=board, current_player=current_player, game_over=game_over, winner=winner, winning_condition=winning_condition)
 
 @app.route('/move', methods=['POST'])
 def move():
@@ -43,7 +46,7 @@ def move():
             check_winner()
             if not game_over:
                 current_player = 'O' if current_player == 'X' else 'X'
-    return jsonify({'board': board, 'currentPlayer': current_player, 'gameOver': game_over, 'winner': winner})
+    return jsonify({'board': board, 'currentPlayer': current_player, 'gameOver': game_over, 'winner': winner, 'winningCondition': winning_condition})
 
 if __name__ == '__main__':
     app.run(debug=True)

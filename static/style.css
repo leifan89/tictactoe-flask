@@ -15,6 +15,7 @@ h1 {
 }
 
 #game-board {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(3, 100px);
     grid-gap: 5px;
@@ -38,6 +39,17 @@ h1 {
 
 .cell:hover {
     background-color: #f0f0f0;
+}
+
+.winner {
+    background-color: #ffe6e6;
+}
+
+.winning-line {
+    position: absolute;
+    background-color: #ff0000;
+    z-index: 10;
+    pointer-events: none;
 }
 
 p#status {
