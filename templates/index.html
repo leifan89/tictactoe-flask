@@ -7,6 +7,18 @@
 </head>
 <body>
     <h1>Tic Tac Toe Game</h1>
+    
+    <div id="game-mode-selector">
+        <label class="mode-option">
+            <input type="radio" name="game-mode" value="human" checked>
+            <span class="mode-label">Human vs Human</span>
+        </label>
+        <label class="mode-option">
+            <input type="radio" name="game-mode" value="ai">
+            <span class="mode-label">Human vs AI</span>
+        </label>
+    </div>
+    
     <div id="game-board">
         {% for i in range(9) %}
             <div class="cell" onclick="makeMove({{ i }})" data-index="{{ i }}">
@@ -19,12 +31,13 @@
 
     <script>
         const cells = document.querySelectorAll('.cell');
-        let board = {{ board | tojson }};
-        let currentPlayer = '{{ current_player }}';
-        let gameOver = {{ game_over | lower }};
-        let winner = {% if winner %}{{ winner | tojson }}{% else %}null{% endif %};
-        let winningCondition = {% if winning_condition %}{{ winning_condition | tojson }}{% else %}null{% endif %};
+        let board = {{ board | tojson | safe }};
+        let currentPlayer = {{ current_player | tojson | safe }};
+        let gameOver = {{ game_over | tojson | safe }};
+        let winner = {{ winner | tojson | safe if winner else 'null' }};
+        let winningCondition = {{ winning_condition | tojson | safe if winning_condition else 'null' }};
         let winningCells = [];
+        let aiMode = {{ ai_mode | tojson | safe }};
 
         function updateBoard(response) {
             board = response.board;
@@ -142,6 +155,46 @@
             
             gameBoard.appendChild(line);
         }
+
+        function setGameMode(mode) {
+            fetch('/set_mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `ai_mode=${mode === 'ai'}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                aiMode = data.ai_mode;
+                // Reset the board display
+                cells.forEach(cell => {
+                    cell.textContent = '';
+                    cell.classList.remove('winner');
+                });
+                // Remove any existing winning lines
+                const existingLines = document.querySelectorAll('.winning-line');
+                existingLines.forEach(line => line.remove());
+                
+                // Reset game state
+                board = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
+                currentPlayer = 'X';
+                gameOver = false;
+                winner = null;
+                winningCondition = null;
+                document.getElementById('status').textContent = 'Current Player: X';
+            });
+        }
+
+        // Add event listeners for game mode selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const modeRadios = document.querySelectorAll('input[name="game-mode"]');
+            modeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    setGameMode(this.value);
+                });
+            });
+        });
 
     </script>
 </body>
