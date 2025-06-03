@@ -26,18 +26,32 @@
             </div>
         {% endfor %}
     </div>
-    <p id="status">{{ 'Current Player: ' + current_player if not game_over else ('Winner: ' + winner if winner else 'It\'s a tie!') }}</p>
+    <p id="status">{% if not game_over %}Current Player: {{ current_player }}{% else %}{% if winner %}Winner: {{ winner }}{% else %}It's a tie!{% endif %}{% endif %}</p>
     <button onclick="resetGame()">Reset Game</button>
+
+    <!-- Hidden data elements to pass server data to JavaScript -->
+    <div id="game-data" style="display: none;"
+         data-board="{{ board | join(',') }}"
+         data-current-player="{{ current_player }}"
+         data-game-over="{{ game_over | lower }}"
+         data-winner="{{ winner or '' }}"
+         data-winning-condition="{{ winning_condition | join(',') if winning_condition else '' }}"
+         data-ai-mode="{{ ai_mode | lower }}">
+    </div>
 
     <script>
         const cells = document.querySelectorAll('.cell');
-        let board = {{ board | tojson | safe }};
-        let currentPlayer = {{ current_player | tojson | safe }};
-        let gameOver = {{ game_over | tojson | safe }};
-        let winner = {{ winner | tojson | safe if winner else 'null' }};
-        let winningCondition = {{ winning_condition | tojson | safe if winning_condition else 'null' }};
+        const gameData = document.getElementById('game-data');
+        
+        // Initialize game state from server data
+        let board = gameData.dataset.board.split(',');
+        let currentPlayer = gameData.dataset.currentPlayer;
+        let gameOver = gameData.dataset.gameOver === 'true';
+        let winner = gameData.dataset.winner || null;
+        let winningCondition = gameData.dataset.winningCondition ? 
+            gameData.dataset.winningCondition.split(',').map(Number) : null;
         let winningCells = [];
-        let aiMode = {{ ai_mode | tojson | safe }};
+        let aiMode = gameData.dataset.aiMode === 'true';
 
         function updateBoard(response) {
             board = response.board;
@@ -47,29 +61,46 @@
             winningCondition = response.winningCondition;
 
             cells.forEach((cell, index) => {
-                cell.textContent = board[index];
+                cell.textContent = board[index] === ' ' ? '' : board[index];
             });
 
             if (gameOver) {
-                document.getElementById('status').textContent = winner ? `Winner: ${winner}` : 'It\'s a tie!';
+                document.getElementById('status').textContent = winner ? `Winner: ${winner}` : "It's a tie!";
                 if (winningCondition) {
                     highlightWinningCells();
                 }
             } else {
-                document.getElementById('status').textContent = `Current Player: ${currentPlayer}`;
+                if (response.aiTurn) {
+                    document.getElementById('status').textContent = 'AI is thinking...';
+                    // Trigger AI move after a short delay to show the "thinking" message
+                    setTimeout(() => {
+                        fetch('/ai_move', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(updateBoard);
+                    }, 100);
+                } else {
+                    document.getElementById('status').textContent = `Current Player: ${currentPlayer}`;
+                }
             }
         }
 
         function makeMove(position) {
-            fetch('/move', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `position=${position}`
-            })
-            .then(response => response.json())
-            .then(updateBoard);
+            if (board[position] === ' ' && !gameOver) {
+                fetch('/move', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `position=${position}`
+                })
+                .then(response => response.json())
+                .then(updateBoard);
+            }
         }
 
         function resetGame() {

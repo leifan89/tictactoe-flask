@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import random
+import time
+import threading
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
@@ -107,6 +109,70 @@ def get_ai_move():
     
     return best_move
 
+def calculate_ai_delay():
+    """Calculate a variable delay for AI moves to simulate thinking time"""
+    available_moves = get_available_moves()
+    num_moves_made = 9 - len(available_moves)
+    
+    # Base delay between 0.8 and 2.5 seconds
+    base_delay = random.uniform(0.8, 2.5)
+    
+    # Add complexity factor - early game moves take longer
+    if num_moves_made <= 2:
+        # Opening moves - slightly longer thinking
+        complexity_factor = random.uniform(0.3, 0.8)
+    elif num_moves_made >= 6:
+        # End game - quicker decisions
+        complexity_factor = random.uniform(-0.2, 0.2)
+    else:
+        # Mid game - variable thinking time
+        complexity_factor = random.uniform(0.0, 0.5)
+    
+    # Check if this is a winning or blocking move (more "difficult")
+    ai_move = get_ai_move()
+    if ai_move is not None:
+        # Test if this move wins the game
+        test_board = board[:]
+        test_board[ai_move] = ai_player
+        
+        # Check if AI wins
+        win_conditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ]
+        
+        is_winning_move = False
+        is_blocking_move = False
+        
+        for condition in win_conditions:
+            if test_board[condition[0]] == test_board[condition[1]] == test_board[condition[2]] == ai_player:
+                is_winning_move = True
+                break
+        
+        # Check if this move blocks human from winning
+        if not is_winning_move:
+            human_player = 'X' if ai_player == 'O' else 'O'
+            for move in available_moves:
+                if move != ai_move:
+                    test_board_human = board[:]
+                    test_board_human[move] = human_player
+                    for condition in win_conditions:
+                        if test_board_human[condition[0]] == test_board_human[condition[1]] == test_board_human[condition[2]] == human_player:
+                            is_blocking_move = True
+                            break
+                    if is_blocking_move:
+                        break
+        
+        # Critical moves take longer to "calculate"
+        if is_winning_move:
+            complexity_factor += random.uniform(0.4, 0.9)  # Winning moves take longer
+        elif is_blocking_move:
+            complexity_factor += random.uniform(0.2, 0.6)  # Blocking moves take some time
+    
+    total_delay = max(0.5, base_delay + complexity_factor)  # Minimum 0.5 seconds
+    return min(total_delay, 4.0)  # Maximum 4 seconds
+
 @app.route('/')
 def index():
     global board, current_player, game_over, winner, winning_condition, ai_mode
@@ -141,15 +207,32 @@ def move():
             check_winner()
             if not game_over:
                 current_player = 'O' if current_player == 'X' else 'X'
-                
-                # If AI mode is enabled and it's AI's turn, make AI move
-                if ai_mode and current_player == ai_player and not game_over:
-                    ai_move = get_ai_move()
-                    if ai_move is not None:
-                        board[ai_move] = ai_player
-                        check_winner()
-                        if not game_over:
-                            current_player = 'X' if current_player == 'O' else 'O'
+    
+    return jsonify({
+        'board': board, 
+        'currentPlayer': current_player, 
+        'gameOver': game_over, 
+        'winner': winner, 
+        'winningCondition': winning_condition,
+        'aiMode': ai_mode,
+        'aiTurn': ai_mode and current_player == ai_player and not game_over
+    })
+
+@app.route('/ai_move', methods=['POST'])
+def ai_move():
+    global board, current_player, game_over
+    
+    if not game_over and ai_mode and current_player == ai_player:
+        # Calculate and apply the delay
+        delay = calculate_ai_delay()
+        time.sleep(delay)
+        
+        ai_move_pos = get_ai_move()
+        if ai_move_pos is not None:
+            board[ai_move_pos] = ai_player
+            check_winner()
+            if not game_over:
+                current_player = 'X' if current_player == 'O' else 'O'
     
     return jsonify({
         'board': board, 
