@@ -160,9 +160,5 @@ def move():
         'aiMode': ai_mode
     })
 
-# This is the handler function that Vercel will call
-def handler(request):
-    return app(request.environ, lambda status, headers: None)
-
-# For Vercel compatibility
+# Export the Flask app for Vercel
 app = app
