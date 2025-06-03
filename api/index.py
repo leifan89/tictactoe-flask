@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import random
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
 # Initialize the board
 board = [' ' for _ in range(9)]
@@ -160,5 +160,9 @@ def move():
         'aiMode': ai_mode
     })
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+# This is the handler function that Vercel will call
+def handler(request):
+    return app(request.environ, lambda status, headers: None)
+
+# For Vercel compatibility
+app = app
